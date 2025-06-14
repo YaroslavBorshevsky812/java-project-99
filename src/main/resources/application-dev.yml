@@ -1,3 +1,10 @@
 spring:
   datasource:
     driver-class-name: org.h2.Driver
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    hexlet.code: DEBUG

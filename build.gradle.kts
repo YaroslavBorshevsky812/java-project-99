@@ -38,6 +38,15 @@ dependencies {
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("org.postgresql:postgresql:42.1.4")
 
+	implementation("org.openapitools:jackson-databind-nullable:0.2.6")
+
+	implementation("org.mapstruct:mapstruct:1.5.5.Final")
+	annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.0")
+
+	implementation("org.springframework.boot:spring-boot-starter-security:3.5.0")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
