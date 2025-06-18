@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/task_statuses/**").authenticated()
+                .requestMatchers("/api/tasks/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
