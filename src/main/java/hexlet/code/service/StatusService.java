@@ -22,14 +22,15 @@ public class StatusService {
 
     public List<StatusDTO> getAll() {
         return statusRepository.findAll().stream()
-                                   .map(statusMapper::toDto)
-                                   .collect(Collectors.toList());
+                               .map(statusMapper::toDto)
+                               .collect(Collectors.toList());
     }
 
     public StatusDTO getById(Long id) {
-        return statusRepository.findById(id)
-                                   .map(statusMapper::toDto)
-                                   .orElseThrow(() -> new EntityNotFoundException("TaskStatus not found with id: " + id));
+        return statusRepository
+            .findById(id)
+            .map(statusMapper::toDto)
+            .orElseThrow(() -> new EntityNotFoundException("TaskStatus not found with id: " + id));
     }
 
     @Transactional
@@ -41,8 +42,9 @@ public class StatusService {
 
     @Transactional
     public StatusDTO update(Long id, StatusUpdateDTO dto) {
-        var taskStatus = statusRepository.findById(id)
-                                             .orElseThrow(() -> new EntityNotFoundException("TaskStatus not found with id: " + id));
+        var taskStatus = statusRepository
+                .findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("TaskStatus not found with id: " + id));
 
         statusMapper.updateEntity(dto, taskStatus);
         taskStatus = statusRepository.save(taskStatus);

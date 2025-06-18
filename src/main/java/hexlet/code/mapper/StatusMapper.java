@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 @Component
 public abstract class StatusMapper {
     public abstract StatusDTO toDto(Status entity);
+
     public abstract Status toEntity(StatusCreateDTO dto);
-    public abstract  void updateEntity(StatusUpdateDTO dto, @MappingTarget Status entity);
+
+    public abstract void updateEntity(StatusUpdateDTO dto, @MappingTarget Status entity);
 }

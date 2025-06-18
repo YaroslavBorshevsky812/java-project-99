@@ -2,7 +2,6 @@ package hexlet.code.controller;
 
 import hexlet.code.dto.AuthDTO;
 import hexlet.code.repository.UserRepository;
-import hexlet.code.service.UserService;
 import hexlet.code.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
