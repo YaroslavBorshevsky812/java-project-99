@@ -1,10 +1,11 @@
 package hexlet.code.controller;
 
-import hexlet.code.dto.user.UserCreateDTO;
-import hexlet.code.dto.user.UserDTO;
-import hexlet.code.dto.user.UserUpdateDTO;
-import hexlet.code.service.UserService;
+import hexlet.code.dto.status.StatusCreateDTO;
+import hexlet.code.dto.status.StatusDTO;
+import hexlet.code.dto.status.StatusUpdateDTO;
+import hexlet.code.service.StatusService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,39 +20,36 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
-public class UserController {
+@RequestMapping("/api/task_statuses")
+@RequiredArgsConstructor
+public class StatusController {
 
-    private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+    private final StatusService taskStatusService;
 
     @GetMapping
-    public List<UserDTO> getAll() {
-        return userService.getAll();
+    public List<StatusDTO> getAll() {
+        return taskStatusService.getAll();
     }
 
     @GetMapping("/{id}")
-    public UserDTO getById(@PathVariable Long id) {
-        return userService.getById(id);
+    public StatusDTO getById(@PathVariable Long id) {
+        return taskStatusService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserDTO create(@Valid @RequestBody UserCreateDTO dto) {
-        return userService.create(dto);
+    public StatusDTO create(@Valid @RequestBody StatusCreateDTO dto) {
+        return taskStatusService.create(dto);
     }
 
     @PutMapping("/{id}")
-    public UserDTO update(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO dto) {
-        return userService.updateUser(id, dto);
+    public StatusDTO update(@PathVariable Long id, @Valid @RequestBody StatusUpdateDTO dto) {
+        return taskStatusService.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        userService.delete(id);
+        taskStatusService.delete(id);
     }
 }
