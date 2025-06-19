@@ -2,7 +2,9 @@ package hexlet.code.config;
 
 import hexlet.code.dto.user.UserCreateDTO;
 import hexlet.code.mapper.UserMapper;
+import hexlet.code.model.Label;
 import hexlet.code.model.Status;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.StatusRepository;
 import hexlet.code.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +20,14 @@ public class DataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final StatusRepository statusRepository;
+    private final LabelRepository labelRepository;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
         try {
             initAdminUser();
             initDefaultStatuses();
+            initLabels();
         } catch (Exception ex) {
             log.error("init data error", ex);
         }
@@ -52,5 +56,18 @@ public class DataInitializer implements ApplicationRunner {
         if (!statusRepository.existsBySlug(slug)) {
             statusRepository.save(new Status(name, slug));
         }
+    }
+
+    private void initLabels() {
+        if (labelRepository.count() == 0) {
+            createLabel("feature");
+            createLabel("bug");
+        }
+    }
+
+    private void createLabel(String name) {
+        Label label = new Label();
+        label.setName(name);
+        labelRepository.save(label);
     }
 }

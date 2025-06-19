@@ -3,9 +3,11 @@ package hexlet.code.mapper;
 import hexlet.code.dto.task.TaskCreateDTO;
 import hexlet.code.dto.task.TaskDTO;
 import hexlet.code.dto.task.TaskUpdateDTO;
+import hexlet.code.model.Status;
 import hexlet.code.model.Task;
 import hexlet.code.repository.StatusRepository;
 import hexlet.code.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -32,14 +34,20 @@ public abstract class TaskMapper {
 
     @Mapping(target = "assigneeId", source = "assignee.id")
     @Mapping(target = "status", source = "status.slug")
+    @Mapping(target = "title", source = "name")
+    @Mapping(target = "content", source = "description")
     public abstract TaskDTO toDto(Task task);
 
-    @Mapping(target = "status", ignore = true)
-    @Mapping(target = "assignee", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "name", source = "title")
+    @Mapping(target = "description", source = "content")
     public abstract Task toEntity(TaskCreateDTO dto);
 
-    @Mapping(target = "status", ignore = true)
-    @Mapping(target = "assignee", ignore = true)
+    @Mapping(target = "name", source = "title")
+    @Mapping(target = "description", source = "content")
     public abstract void updateEntity(TaskUpdateDTO dto, @MappingTarget Task entity);
+
+    public Status toStatus(String statusSlag) {
+        return statusRepository.findBySlug(statusSlag)
+                                   .orElseThrow(() -> new EntityNotFoundException(statusSlag));
+    }
 }

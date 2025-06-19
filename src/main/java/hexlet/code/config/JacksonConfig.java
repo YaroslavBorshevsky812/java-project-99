@@ -1,4 +1,4 @@
-package hexlet.code.config.security;
+package hexlet.code.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
