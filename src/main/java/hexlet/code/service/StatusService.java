@@ -18,6 +18,7 @@ public class StatusService {
 
     @Autowired
     private StatusRepository statusRepository;
+    @Autowired
     private StatusMapper statusMapper;
 
     public List<StatusDTO> getAll() {
