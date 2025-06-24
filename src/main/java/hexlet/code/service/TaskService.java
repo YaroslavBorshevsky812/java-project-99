@@ -64,27 +64,11 @@ public class TaskService {
         return taskMapper.toDto(task);
     }
 
-    @Transactional
-    public TaskDTO update(Long id, TaskUpdateDTO dto) {
-        Task task = taskRepository.findById(id)
-                                  .orElseThrow(() -> new EntityNotFoundException("Task not found"));
-
-        taskMapper.updateEntity(dto, task);
-
-        if (dto.getStatus() != null) {
-            Status status = statusRepository.findBySlug(dto.getStatus())
-                                            .orElseThrow(() -> new IllegalArgumentException("Status not found"));
-            task.setStatus(status);
-        }
-
-        if (dto.getAssigneeId() != null) {
-            User assignee = userRepository.findById(dto.getAssigneeId())
-                                          .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            task.setAssignee(assignee);
-        }
-
-        task = taskRepository.save(task);
-        return taskMapper.toDto(task);
+    public TaskDTO update(Long id, TaskUpdateDTO taskUpdateDTO) {
+        var task = taskRepository.findById(id).orElseThrow(() -> new EntityNotFoundException());
+        taskMapper.updateEntity(taskUpdateDTO, task);
+        var updatedTask = taskRepository.save(task);
+        return taskMapper.toDto(updatedTask);
     }
 
     @Transactional

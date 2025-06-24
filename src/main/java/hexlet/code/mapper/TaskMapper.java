@@ -23,7 +23,8 @@ import static org.mapstruct.CollectionMappingStrategy.TARGET_IMMUTABLE;
     componentModel = MappingConstants.ComponentModel.SPRING,
     collectionMappingStrategy = TARGET_IMMUTABLE,
     nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
-    unmappedTargetPolicy = ReportingPolicy.IGNORE
+    unmappedTargetPolicy = ReportingPolicy.IGNORE,
+    uses = {JsonNullableMapper.class, ReferenceMapper.class}
 )
 @Slf4j
 public abstract class TaskMapper {
@@ -50,4 +51,6 @@ public abstract class TaskMapper {
         return statusRepository.findBySlug(statusSlag)
                                    .orElseThrow(() -> new EntityNotFoundException(statusSlag));
     }
+
+
 }
