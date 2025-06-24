@@ -44,7 +44,7 @@ dependencies {
 	annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
 
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.0")
-
+	testImplementation("org.springframework.security:spring-security-test:6.5.1")
 	implementation("org.springframework.boot:spring-boot-starter-security:3.5.0")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-web")
