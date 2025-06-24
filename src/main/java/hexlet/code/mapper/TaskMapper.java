@@ -37,14 +37,17 @@ public abstract class TaskMapper {
     @Mapping(target = "status", source = "status.slug")
     @Mapping(target = "title", source = "name")
     @Mapping(target = "content", source = "description")
+    @Mapping(target = "taskLabelIds", source = "labels")
     public abstract TaskDTO toDto(Task task);
 
     @Mapping(target = "name", source = "title")
     @Mapping(target = "description", source = "content")
+    @Mapping(target = "labels", source = "taskLabelIds")
     public abstract Task toEntity(TaskCreateDTO dto);
 
     @Mapping(target = "name", source = "title")
     @Mapping(target = "description", source = "content")
+    @Mapping(target = "labels", source = "taskLabelIds")
     public abstract void updateEntity(TaskUpdateDTO dto, @MappingTarget Task entity);
 
     public Status toStatus(String statusSlag) {
