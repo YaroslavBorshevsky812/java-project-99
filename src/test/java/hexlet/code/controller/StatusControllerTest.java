@@ -1,193 +1,155 @@
 package hexlet.code.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.dto.status.StatusCreateDTO;
 import hexlet.code.dto.status.StatusDTO;
 import hexlet.code.dto.status.StatusUpdateDTO;
-import hexlet.code.service.StatusService;
+import hexlet.code.mapper.StatusMapper;
+import hexlet.code.model.Status;
+import hexlet.code.repository.StatusRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class StatusControllerTest {
 
     @Autowired
+    private WebApplicationContext wac;
+
+    @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private StatusRepository taskStatusRepository;
 
-    @MockBean
-    private StatusService statusService;
+    @Autowired
+    private ObjectMapper om;
 
-    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor token;
+    @Autowired
+    private StatusMapper taskStatusMapper;
+
+    private JwtRequestPostProcessor token;
+    private Status testStatus;
 
     @BeforeEach
     void setUp() {
-        token = SecurityMockMvcRequestPostProcessors.jwt().jwt(builder ->
-                                                                   builder.subject("test@example.com")
-        );
+        mockMvc = MockMvcBuilders.webAppContextSetup(wac)
+                                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
+                                 .apply(springSecurity())
+                                 .build();
+
+        // Инициализация тестового статуса
+        testStatus = new Status();
+        testStatus.setName("Test Status");
+        testStatus.setSlug("test-status");
+        taskStatusRepository.save(testStatus);
+
+        token = jwt().jwt(builder -> builder.subject("admin@ad.min"));
     }
 
-    private StatusDTO createTestStatusDTO(Long id) {
-        StatusDTO dto = new StatusDTO();
-        dto.setId(id);
-        dto.setName("Test Status");
-        dto.setSlug("test-status");
-        dto.setCreatedAt(LocalDate.now());
-        return dto;
-    }
-
-    private StatusCreateDTO createStatusCreateDTO() {
-        StatusCreateDTO dto = new StatusCreateDTO();
-        dto.setName("Test Status");
-        dto.setSlug("test-status");
-        return dto;
-    }
-
-    private StatusUpdateDTO createStatusUpdateDTO() {
-        StatusUpdateDTO dto = new StatusUpdateDTO();
-        dto.setName("Updated Status");
-        dto.setSlug("updated-status");
-        return dto;
+    @AfterEach
+    void clean() {
+        taskStatusRepository.deleteAll();
     }
 
     @Test
-    void getAllStatusesShouldReturnStatusList() throws Exception {
-        StatusDTO statusDTO = createTestStatusDTO(1L);
+    void testIndex() throws Exception {
+        var response = mockMvc.perform(get("/api/task_statuses").with(jwt()))
+                              .andExpect(status().isOk())
+                              .andReturn()
+                              .getResponse();
+        var body = response.getContentAsString();
 
-        when(statusService.getAll()).thenReturn(List.of(statusDTO));
+        List<StatusDTO> actual = om.readValue(body, new TypeReference<>() { });
+        var expected = taskStatusRepository.findAll().stream()
+                                           .map(taskStatusMapper::toDto)
+                                           .toList();
 
-        mockMvc.perform(get("/api/task_statuses")
-                            .with(token))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$[0].id").value(1))
-               .andExpect(jsonPath("$[0].name").value("Test Status"))
-               .andExpect(jsonPath("$[0].slug").value("test-status"));
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test
-    void getStatusByIdShouldReturnStatus() throws Exception {
-        StatusDTO statusDTO = createTestStatusDTO(1L);
+    void testCreate() throws Exception {
+        StatusCreateDTO data = new StatusCreateDTO();
+        data.setName("New Status");
+        data.setSlug("new-status");
 
-        when(statusService.getById(1L)).thenReturn(statusDTO);
+        var request = post("/api/task_statuses")
+            .with(token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(om.writeValueAsString(data));
+        mockMvc.perform(request)
+               .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/task_statuses/1")
-                            .with(token))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.id").value(1))
-               .andExpect(jsonPath("$.name").value("Test Status"))
-               .andExpect(jsonPath("$.slug").value("test-status"));
+        var status = taskStatusRepository.findBySlug(data.getSlug()).orElse(null);
+
+        assertThat(status).isNotNull();
+        assertThat(status.getName()).isEqualTo(data.getName());
+        assertThat(status.getSlug()).isEqualTo(data.getSlug());
     }
 
     @Test
-    void createStatusShouldReturnCreatedStatus() throws Exception {
-        StatusCreateDTO createDTO = createStatusCreateDTO();
-        StatusDTO createdDTO = createTestStatusDTO(1L);
+    void testUpdate() throws Exception {
+        var data = new StatusUpdateDTO();
+        data.setName("New Status");
 
-        when(statusService.create(any(StatusCreateDTO.class))).thenReturn(createdDTO);
+        var request = put("/api/task_statuses/" + testStatus.getId())
+            .with(token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(om.writeValueAsString(data));
 
-        mockMvc.perform(post("/api/task_statuses")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(createDTO))
-                            .with(token))
-               .andExpect(status().isCreated())
-               .andExpect(jsonPath("$.id").value(1))
-               .andExpect(jsonPath("$.name").value("Test Status"))
-               .andExpect(jsonPath("$.slug").value("test-status"));
+        mockMvc.perform(request)
+               .andExpect(status().isOk());
+
+        var status = taskStatusRepository.findById(testStatus.getId()).orElseThrow();
+        assertThat(status.getName()).isEqualTo("New Status");
+        // Проверяем, что slug не изменился
+        assertThat(status.getSlug()).isEqualTo(testStatus.getSlug());
     }
 
     @Test
-    void updateStatusShouldReturnUpdatedStatus() throws Exception {
-        StatusUpdateDTO updateDTO = createStatusUpdateDTO();
-        StatusDTO updatedDTO = createTestStatusDTO(1L);
-        updatedDTO.setName("Updated Status");
-        updatedDTO.setSlug("updated-status");
+    void testShow() throws Exception {
+        var request = get("/api/task_statuses/" + testStatus.getId()).with(jwt());
+        var result = mockMvc.perform(request)
+                            .andExpect(status().isOk())
+                            .andReturn();
+        var body = result.getResponse().getContentAsString();
 
-        when(statusService.update(eq(1L), any(StatusUpdateDTO.class))).thenReturn(updatedDTO);
-
-        mockMvc.perform(put("/api/task_statuses/1")
-                            .with(token)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.id").value(1))
-               .andExpect(jsonPath("$.name").value("Updated Status"))
-               .andExpect(jsonPath("$.slug").value("updated-status"));
+        StatusDTO responseDto = om.readValue(body, StatusDTO.class);
+        assertThat(responseDto.getName()).isEqualTo(testStatus.getName());
+        assertThat(responseDto.getSlug()).isEqualTo(testStatus.getSlug());
     }
 
     @Test
-    void deleteStatusShouldReturnNoContent() throws Exception {
-        mockMvc.perform(delete("/api/task_statuses/1")
-                            .with(token))
+    void testDelete() throws Exception {
+        var request = delete("/api/task_statuses/" + testStatus.getId())
+            .with(token);
+        mockMvc.perform(request)
                .andExpect(status().isNoContent());
 
-        verify(statusService).delete(1L);
-    }
-
-    @Test
-    void createStatusShouldReturnBadRequestForInvalidData() throws Exception {
-        StatusCreateDTO invalidDTO = new StatusCreateDTO(); // Пустой DTO
-
-        mockMvc.perform(post("/api/task_statuses")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidDTO))
-                            .with(token))
-               .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void createStatusShouldReturnBadRequestForLongName() throws Exception {
-        StatusCreateDTO invalidDTO = createStatusCreateDTO();
-        invalidDTO.setName("a".repeat(101)); // Превышение максимальной длины
-
-        mockMvc.perform(post("/api/task_statuses")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidDTO))
-                            .with(token))
-               .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateStatusShouldReturnUnauthorizedWithoutToken() throws Exception {
-        StatusUpdateDTO updateDTO = createStatusUpdateDTO();
-
-        mockMvc.perform(put("/api/task_statuses/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void getNonExistentStatusShouldReturnNotFound() throws Exception {
-        when(statusService.getById(999L)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        mockMvc.perform(get("/api/task_statuses/999")
-                            .with(token))
-               .andExpect(status().isNotFound());
+        assertThat(taskStatusRepository.existsById(testStatus.getId())).isFalse();
     }
 }

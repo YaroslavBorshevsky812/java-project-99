@@ -83,7 +83,7 @@ public class TaskService {
 
     private Specification<Task> buildTaskSpecification(TaskFilter filter) {
         return Specification.<Task>where(null)
-                            .and(TaskSpecifications.withTitleContaining(filter.getTitleCont()))
+                            .and(TaskSpecifications.withNameContaining(filter.getTitleCont()))
                             .and(TaskSpecifications.withAssigneeId(filter.getAssigneeId()))
                             .and(TaskSpecifications.withStatus(filter.getStatus()))
                             .and(TaskSpecifications.withLabelId(filter.getLabelId()));

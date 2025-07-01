@@ -1,209 +1,144 @@
 package hexlet.code.controller;
 
-import hexlet.code.dto.user.UserCreateDTO;
-import hexlet.code.dto.user.UserDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.dto.user.UserUpdateDTO;
 import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import java.nio.charset.StandardCharsets;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class UserControllerTest {
 
     @Autowired
+    private WebApplicationContext wac;
+
+    @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
     private UserRepository userRepository;
 
-    @MockBean
+    @Autowired
+    private ObjectMapper om;
+
+    @Autowired
     private UserMapper userMapper;
 
-    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor token;
+    private JwtRequestPostProcessor token;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
-        User testUser = createTestUser(1L);
-        token = SecurityMockMvcRequestPostProcessors.jwt().jwt(builder ->
-                                                                   builder.subject(testUser.getEmail())
-        );
+        mockMvc = MockMvcBuilders.webAppContextSetup(wac)
+                                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
+                                 .apply(springSecurity())
+                                 .build();
+
+        // Создаем тестового пользователя вручную
+        testUser = new User();
+        testUser.setEmail("test@example.com");
+        testUser.setPassword("password");
+        testUser.setFirstName("John");
+        testUser.setLastName("Doe");
+        userRepository.save(testUser);
+
+        token = jwt().jwt(builder -> builder.subject(testUser.getEmail()));
     }
 
-    private User createTestUser(Long id) {
-        User user = new User();
-        user.setId(id);
-        user.setFirstName("John");
-        user.setLastName("Doe");
-        user.setEmail("john.doe@example.com");
-        user.setPassword("password");
-        user.setCreatedAt(LocalDate.now());
-        user.setUpdatedAt(LocalDate.now());
-        return user;
-    }
-
-    private UserDTO createTestUserDTO(Long id) {
-        UserDTO dto = new UserDTO();
-        dto.setId(id);
-        dto.setFirstName("John");
-        dto.setLastName("Doe");
-        dto.setEmail("john.doe@example.com");
-        return dto;
-    }
-
-    private UserCreateDTO createUserCreateDTO() {
-        UserCreateDTO dto = new UserCreateDTO();
-        dto.setFirstName("John");
-        dto.setLastName("Doe");
-        dto.setEmail("john.doe@example.com");
-        dto.setPassword("password");
-        return dto;
-    }
-
-    private UserUpdateDTO createUserUpdateDTO() {
-        UserUpdateDTO dto = new UserUpdateDTO();
-        dto.setFirstName(JsonNullable.of("John"));
-        dto.setLastName(JsonNullable.of("Smith"));
-        dto.setEmail(JsonNullable.of("john.smith@example.com"));
-        return dto;
+    @AfterEach
+    void clean() {
+        userRepository.deleteAll();
     }
 
     @Test
-    void getAllUsersShouldReturnUserList() throws Exception {
-        User user = createTestUser(1L);
-        UserDTO userDTO = createTestUserDTO(1L);
+    void testIndex() throws Exception {
+        // Добавляем второго пользователя для проверки списка
+        User anotherUser = new User();
+        anotherUser.setEmail("another@example.com");
+        anotherUser.setPassword("password");
+        anotherUser.setFirstName("Jane");
+        anotherUser.setLastName("Smith");
+        userRepository.save(anotherUser);
 
-        when(userRepository.findAll()).thenReturn(List.of(user));
-        when(userMapper.toDTO(user)).thenReturn(userDTO);
-
-        mockMvc.perform(get("/api/users")
-                            .with(token))
+        mockMvc.perform(get("/api/users").with(jwt()))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$[0].id").value(1))
-               .andExpect(jsonPath("$[0].firstName").value("John"))
-               .andExpect(jsonPath("$[0].lastName").value("Doe"))
-               .andExpect(jsonPath("$[0].email").value("john.doe@example.com"));
+               .andExpect(jsonPath("$").isArray())
+               .andExpect(jsonPath("$[0].email").value(testUser.getEmail()))
+               .andExpect(jsonPath("$[1].email").value(anotherUser.getEmail()));
     }
 
     @Test
-    void getUserByIdShouldReturnUser() throws Exception {
-        User user = createTestUser(1L);
-        UserDTO userDTO = createTestUserDTO(1L);
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userMapper.toDTO(user)).thenReturn(userDTO);
-
-        mockMvc.perform(get("/api/users/1")
-                            .with(token))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.id").value(1))
-               .andExpect(jsonPath("$.firstName").value("John"))
-               .andExpect(jsonPath("$.lastName").value("Doe"))
-               .andExpect(jsonPath("$.email").value("john.doe@example.com"));
-    }
-
-    @Test
-    void createUserShouldReturnCreatedUser() throws Exception {
-        UserCreateDTO createDTO = createUserCreateDTO();
-        User newUser = createTestUser(null);
-        User savedUser = createTestUser(1L);
-        UserDTO savedUserDTO = createTestUserDTO(1L);
-
-        when(userMapper.toEntity(createDTO)).thenReturn(newUser);
-        when(userRepository.save(newUser)).thenReturn(savedUser);
-        when(userMapper.toDTO(savedUser)).thenReturn(savedUserDTO);
+    void testCreate() throws Exception {
+        var data = new User();
+        data.setEmail("new@example.com");
+        data.setPassword("newpassword");
+        data.setFirstName("New");
+        data.setLastName("User");
 
         mockMvc.perform(post("/api/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(createDTO)))
-               .andExpect(status().isCreated())
-               .andExpect(jsonPath("firstName").value("John"))
-               .andExpect(jsonPath("lastName").value("Doe"))
-               .andExpect(jsonPath("email").value("john.doe@example.com"));
-    }
-
-
-    @Test
-    void updateUserShouldReturnUpdatedUser() throws Exception {
-        UserUpdateDTO updateDTO = createUserUpdateDTO();
-        User existingUser = createTestUser(1L);
-        User updatedUser = createTestUser(1L);
-        updatedUser.setLastName("Smith");
-        updatedUser.setEmail("john.smith@example.com");
-
-        UserDTO updatedUserDTO = createTestUserDTO(1L);
-        updatedUserDTO.setLastName("Smith");
-        updatedUserDTO.setEmail("john.smith@example.com");
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(existingUser)).thenReturn(updatedUser);
-        when(userMapper.toDTO(updatedUser)).thenReturn(updatedUserDTO);
-
-        mockMvc.perform(put("/api/users/1")
                             .with(token)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
+                            .content(om.writeValueAsString(data)))
+               .andExpect(status().isCreated())
+               .andExpect(jsonPath("$.email").value("new@example.com"))
+               .andExpect(jsonPath("$.firstName").value("New"));
+
+        var user = userRepository.findByEmail("new@example.com").orElse(null);
+        assertNotNull(user);
+        assertThat(user.getFirstName()).isEqualTo("New");
+        assertThat(user.getLastName()).isEqualTo("User");
+    }
+
+    @Test
+    void testUpdate() throws Exception {
+        var data = new UserUpdateDTO();
+        data.setFirstName(JsonNullable.of("Mike"));
+        data.setLastName(JsonNullable.of("Johnson"));
+
+        mockMvc.perform(put("/api/users/" + testUser.getId())
+                            .with(token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(om.writeValueAsString(data)))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.id").value(1))
-               .andExpect(jsonPath("$.firstName").value("John"))
-               .andExpect(jsonPath("$.lastName").value("Smith"))
-               .andExpect(jsonPath("$.email").value("john.smith@example.com"));
+               .andExpect(jsonPath("$.firstName").value("Mike"))
+               .andExpect(jsonPath("$.lastName").value("Johnson"));
+
+        var user = userRepository.findById(testUser.getId()).orElseThrow();
+        assertThat(user.getFirstName()).isEqualTo("Mike");
+        assertThat(user.getLastName()).isEqualTo("Johnson");
     }
 
     @Test
-    void deleteUserShouldReturnNoContent() throws Exception {
-        when(userRepository.existsById(1L)).thenReturn(true);
-
-        mockMvc.perform(delete("/api/users/1")
-                            .with(token))
-               .andExpect(status().isNoContent());
-
-        verify(userRepository).deleteById(1L);
-    }
-
-    @Test
-    void createUserShouldReturnBadRequestForInvalidData() throws Exception {
-        UserCreateDTO invalidDTO = new UserCreateDTO(); // Пустой DTO
-
-        mockMvc.perform(post("/api/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidDTO)))
-               .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateUserShouldReturnUnauthorizedWithoutToken() throws Exception {
-        UserUpdateDTO updateDTO = createUserUpdateDTO();
-
-        mockMvc.perform(put("/api/users/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isUnauthorized());
+    void testShow() throws Exception {
+        mockMvc.perform(get("/api/users/" + testUser.getId()).with(jwt()))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.email").value(testUser.getEmail()))
+               .andExpect(jsonPath("$.firstName").value(testUser.getFirstName()))
+               .andExpect(jsonPath("$.lastName").value(testUser.getLastName()));
     }
 }

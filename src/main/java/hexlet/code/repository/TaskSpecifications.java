@@ -1,12 +1,14 @@
 package hexlet.code.repository;
 
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
 public class TaskSpecifications {
-    public static Specification<Task> withTitleContaining(String titleCont) {
+    public static Specification<Task> withNameContaining(String nameCont) {
         return (root, query, cb) ->
-            titleCont == null ? null : cb.like(cb.lower(root.get("title")), "%" + titleCont.toLowerCase() + "%");
+            nameCont == null ? null : cb.like(cb.lower(root.get("name")), "%" + nameCont.toLowerCase() + "%");
     }
 
     public static Specification<Task> withAssigneeId(Long assigneeId) {
@@ -20,7 +22,13 @@ public class TaskSpecifications {
     }
 
     public static Specification<Task> withLabelId(Long labelId) {
-        return (root, query, cb) ->
-            labelId == null ? null : cb.isMember(labelId, root.join("labels").get("id"));
+        return (root, query, cb) -> {
+            if (labelId == null) {
+                return null;
+            }
+
+            Join<Task, Label> labelJoin = root.join("labels");
+            return cb.equal(labelJoin.get("id"), labelId);
+        };
     }
 }
